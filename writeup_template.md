@@ -36,9 +36,10 @@ The goals / steps of this project are the following:
 
 My project includes the following files:
 * model.py containing the script to create and train the model
-* drive.py for driving the car in autonomous mode
+* data_augmentation.py containing code to read and augment training data
+* drive.py for driving the car in autonomous model
 * model.h5 containing a trained convolution neural network 
-* writeup_report.md or writeup_report.pdf summarizing the results
+* writeup_report.md
 
 ####2. Submission includes functional code
 Using the Udacity provided simulator and my drive.py file, the car can be driven autonomously around the track by executing 
@@ -48,21 +49,31 @@ python drive.py model.h5
 
 ####3. Submission code is usable and readable
 
-The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
+The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works. Training is executed simply with a
+```sh
+python model.py
+```
+That of course assumes you have first activated the `carnd-term1` virtual environment.
+
+By default the training script will look for a `.npy` file which contains the preprocessed images. If the file exists it will be loaded in to memory for training (`NEED TO PUT INFO ABOUT RELEVANT FLAGS HERE`). This approach is much quicker but requires a significant amount of system memory to be able to be executed successfully. If the file is not found we default to using the online image generator which will instead stream the images from disk. I found this training approach to be a bit slower as the CPU was anable to feed my GPU fast enough to optimise efficiency on the device. In any case both options are available and should produce similiar* results.
+
+***NOTE**: The online and preprocessing techniques will produce slightly different results as the online approach randomly applies augmentations at runtime. This means that the training algorithm is far less likely to see the same training batches as it cycles through each epoch. The preprocessing technique, however, processes images once and will use the same data for the entire training cycle.
 
 ###Model Architecture and Training Strategy
 
 ####1. An appropriate model architecture has been employed
 
-My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 128 (model.py lines 18-24) 
+My model consists of a convolution neural network with 5x5 filter sizes and a depth of 6 (model.py lines 34, 36) 
 
-The model includes RELU layers to introduce nonlinearity (code line 20), and the data is normalized in the model using a Keras lambda layer (code line 18). 
+The model includes RELU layers to introduce nonlinearity (code line 34, 36), and the data is normalized in the model using a Keras lambda layer (code line 33). 
 
 ####2. Attempts to reduce overfitting in the model
 
 The model contains dropout layers in order to reduce overfitting (model.py lines 21). 
 
-The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
+The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). I used the stadard 80/20 train/val split.
+
+The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
 ####3. Model parameter tuning
 
@@ -70,7 +81,7 @@ The model used an adam optimizer, so the learning rate was not tuned manually (m
 
 ####4. Appropriate training data
 
-Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road ... 
+Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road as well as driving the track backwards to reduce a bias to one direction. 
 
 For details about how I created the training data, see the next section. 
 
@@ -78,23 +89,42 @@ For details about how I created the training data, see the next section.
 
 ####1. Solution Design Approach
 
-The overall strategy for deriving a model architecture was to ...
+The overall strategy for deriving a model architecture was to produce the simplest model possible that was able to navigate the course. My intent was to instead see if I could improve the model by simply diversifying my dataset.
 
-My first step was to use a convolution neural network model similar to the ... I thought this model might be appropriate because ...
+My first step was to use a convolution neural network model similar to the simple LeNet type architecure we have seen in the course material. I thought this model might be appropriate because it seems to be the simplest network that has been able to produce some useful classifcation results.
 
 In order to gauge how well the model was working, I split my image and steering angle data into a training and validation set. I found that my first model had a low mean squared error on the training set but a high mean squared error on the validation set. This implied that the model was overfitting. 
 
-To combat the overfitting, I modified the model so that ...
+To combat the overfitting, I employed early stopping in the training. That is, I trained for fewer epochs so the model did not have the chance to overfit.
 
-Then I ... 
+Then I reduced the edpth of the convolution filters to minimise the learning capacity of the network.
 
-The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track... to improve the driving behavior in these cases, I ....
+The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track to improve the driving behavior in these cases, I simply gathered more data around these areas of the track. Making sure to gather data from the cra travelling in both directions around the course, to ensure a balanced dataset.
 
 At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
 
 ####2. Final Model Architecture
 
-The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
+The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes
+
+| Layer         		|     Description	        					| 
+|:---------------------:|:---------------------------------------------:| 
+| Input         		| 169x320x3 RGB image   					    |
+| Normalise				| Simple max/min normalisation                  |
+| Convolution 5x5     	| 1x1 stride, same padding, 6 filters         	|
+| RELU					|												|
+| Max pooling	      	| 2x2 stride                    				|
+| Convolution 5x5	    | 1x1 stride, same padding, 6 filters    		|
+| RELU					|												|
+| Max pooling	      	| 2x2 stride,  outputs 5x5x6    				|
+| Dropout               | dropout rate 0.2                              |
+| Fully connected		| outputs 120       							|
+| RELU					|												|
+| Fully connected       | outputs 84                                    |
+| RELU					|												|
+| Fully connected   	| output 1    									|
+|						|												|
+
 
 Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
 
