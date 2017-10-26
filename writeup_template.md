@@ -55,7 +55,7 @@ python model.py
 ```
 That of course assumes you have first activated the `carnd-term1` virtual environment.
 
-By default the training script will look for a `.npy` file which contains the preprocessed images. If the file exists it will be loaded in to memory for training (`NEED TO PUT INFO ABOUT RELEVANT FLAGS HERE`). This approach is much quicker but requires a significant amount of system memory to be able to be executed successfully. If the file is not found we default to using the online image generator which will instead stream the images from disk. I found this training approach to be a bit slower as the CPU was anable to feed my GPU fast enough to optimise efficiency on the device. In any case both options are available and should produce similiar* results.
+By default the training script will look for a `.npy` file which contains the preprocessed images. If the file exists it will be loaded in to memory for training (`NEED TO PUT INFO ABOUT RELEVANT FLAGS HERE`). This approach is much quicker but requires a significant amount of system memory to be able to be executed successfully. If the file is not found we default to using the online image generator which will instead stream the images from disk. I found this training approach to be a bit slower as the CPU was unable to feed my GPU fast enough to optimise efficiency on the device. In any case both options are available and should produce similiar* results.
 
 ***NOTE**: The online and preprocessing techniques will produce slightly different results as the online approach randomly applies augmentations at runtime. This means that the training algorithm is far less likely to see the same training batches as it cycles through each epoch. The preprocessing technique, however, processes images once and will use the same data for the entire training cycle.
 
@@ -69,37 +69,35 @@ The model includes RELU layers to introduce nonlinearity (code line 34, 36), and
 
 ####2. Attempts to reduce overfitting in the model
 
-The model contains dropout layers in order to reduce overfitting (model.py lines 21). 
+The model contains dropout layers in order to reduce overfitting **(model.py lines 21) - find appropriate lines**. 
 
-The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). I used the stadard 80/20 train/val split.
+Furthermore, as mentioned above the online data augmentation approach will also reduce overfitting to some extent as data is always having a random augmentation applied to it. This means it is very unlikely the network will see exactly the same image twice. 
+
+The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). I used the standard 80/20 train/val split.
 
 The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
 ####3. Model parameter tuning
 
-The model used an adam optimizer, so the learning rate was not tuned manually (model.py line 25).
+The model used an adam optimizer, so the learning rate was not tuned manually **(model.py line 25)**.
 
 ####4. Appropriate training data
 
-Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road as well as driving the track backwards to reduce a bias to one direction. 
-
-For details about how I created the training data, see the next section. 
+I used the training data supplied by Udacity. Which surprisingly seemed to work rather well. By ensuring I implemented sufficient measures to reduce overfitting and using augmentation to increase the apparent data set size I was able to train a reasonably good newtork with minimal input. Which is very surprising, bu also totally awesome! 
 
 ###Model Architecture and Training Strategy
 
 ####1. Solution Design Approach
 
-The overall strategy for deriving a model architecture was to produce the simplest model possible that was able to navigate the course. My intent was to instead see if I could improve the model by simply diversifying my dataset.
+The overall strategy for deriving a model architecture was originally to produce the simplest model possible that was able to navigate the course. My intent was to instead see if I could improve the model by simply diversifying my dataset.
 
 My first step was to use a convolution neural network model similar to the simple LeNet type architecure we have seen in the course material. I thought this model might be appropriate because it seems to be the simplest network that has been able to produce some useful classifcation results.
 
+Ultimately I had trouble getting such a simple network to learn to drive adequately. So instead I tried to train a model with minimal data and a more complex model. This method produced a network that was able to circumnavigate the first course.
+
 In order to gauge how well the model was working, I split my image and steering angle data into a training and validation set. I found that my first model had a low mean squared error on the training set but a high mean squared error on the validation set. This implied that the model was overfitting. 
 
-To combat the overfitting, I employed early stopping in the training. That is, I trained for fewer epochs so the model did not have the chance to overfit.
-
-Then I reduced the edpth of the convolution filters to minimise the learning capacity of the network.
-
-The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track to improve the driving behavior in these cases, I simply gathered more data around these areas of the track. Making sure to gather data from the cra travelling in both directions around the course, to ensure a balanced dataset.
+To combat the overfitting, I employed early stopping in the training. That is, I trained for fewer epochs so the model did not have the chance to overfit. I also threw in a couple of dropout layers.
 
 At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
 
@@ -109,51 +107,34 @@ The final model architecture (model.py lines 18-24) consisted of a convolution n
 
 | Layer         		|     Description	        					| 
 |:---------------------:|:---------------------------------------------:| 
-| Input         		| 169x320x3 RGB image   					    |
+| Input         		| 160x320x3 RGB image   					    |
 | Normalise				| Simple max/min normalisation                  |
-| Convolution 5x5     	| 1x1 stride, same padding, 6 filters         	|
+| Cropping layer        | Cut out the top of the image                  |
+| Convolution 3x3     	| 1x1 stride, same padding, 16 filters         	|
 | RELU					|												|
 | Max pooling	      	| 2x2 stride                    				|
-| Convolution 5x5	    | 1x1 stride, same padding, 6 filters    		|
+| Convolution 3x3	    | 1x1 stride, same padding, 32 filters    		|
 | RELU					|												|
-| Max pooling	      	| 2x2 stride,  outputs 5x5x6    				|
-| Dropout               | dropout rate 0.2                              |
-| Fully connected		| outputs 120       							|
+| Max pooling	      	| 2x2 stride,                      				|
+| Convolution 3x3       | 1x1 stride, same padding, 64 filters          |
+| RELU                  |                                               |
+| Max pooling           | 2x2 stride,                                   |
+| Fully connected		| outputs 500       							|
 | RELU					|												|
-| Fully connected       | outputs 84                                    |
+| Dropout               | dropout rate 0.5                              |
+| Fully connected       | outputs 100                                   |
 | RELU					|												|
+| Dropout               | dropout rate 0.25                             |
 | Fully connected   	| output 1    									|
 |						|												|
 
-
-Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
-
-![alt text][image1]
-
 ####3. Creation of the Training Set & Training Process
 
-To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
+To augment the data sat, I also flipped images and negated the steering angle to ensure there were an even number of left and right turns. Initially I was not negating the steering angles corresponding to the flipped images which resulted in the network essentially choosing a random direction as it drove.
 
-![alt text][image2]
-
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to .... These images show what a recovery looks like starting from ... :
-
-![alt text][image3]
-![alt text][image4]
-![alt text][image5]
-
-Then I repeated this process on track two in order to get more data points.
-
-To augment the data sat, I also flipped images and angles thinking that this would ... For example, here is an image that has then been flipped:
-
-![alt text][image6]
-![alt text][image7]
-
-Etc ....
-
-After the collection process, I had X number of data points. I then preprocessed this data by ...
+After the collection process, I had X number of data points. I then preprocessed this data by simpoly normalising it to be between [0,1] as well as cropped out the top half of the image. The croppping seemed to be a very effective technique for immproving model performance. It removes the unnessecary noise at the top of the image that holds no information relevant to steering angle.
 
 
 I finally randomly shuffled the data set and put Y% of the data into a validation set. 
 
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
+I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by a convergence (or slowing down of improvement) of the training set accuracy. I used an adam optimizer so that manually training the learning rate wasn't necessary.
