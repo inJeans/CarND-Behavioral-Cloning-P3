@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import os
 import tensorflow as tf
 from keras import models, optimizers, backend
@@ -6,10 +7,11 @@ from keras.layers import core, convolutional, pooling, Lambda, Cropping2D
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import load_model
 from sklearn import model_selection
-from data import generate_samples, preprocess
+from data import generate_samples
 
 PROJECT_PATH = './'
-DATA_PATH = os.path.join(local_project_path, 'data')
+DATA_PATH = os.path.join(PROJECT_PATH,
+                         'data')
 
 DEAFULT_MODEL = "model.h5"
 
@@ -19,10 +21,6 @@ BATCH_SIZE = 1024
 def main():
     model = generate_model()
 
-    image_filepath = os.pth.join(DATA_PATH,
-                                 "car_images.npy")
-    steering_filepath = os.pth.join(DATA_PATH,
-                                 "steering_angles.npy")
     if os.path.isfile(image_filepath) and os.path.isfile(steering_filepath):
         # Read the data
         print("Loading data")
@@ -44,7 +42,7 @@ def main():
                                 validation_data=(X_test, y_test)
                             )
 
-            model.save('model-correct.h5')
+            model.save('model.h5')
     else:
         # Read the data
         driving_log_path = os.path.join(DATA_PATH,
@@ -53,25 +51,22 @@ def main():
         # Split data into training and validation sets
         df_train, df_valid = model_selection.train_test_split(df, test_size=.2)
 
-        datagen = ImageDataGenerator(featurewise_center=True,
-                                     featurewise_std_normalization=True,
-                                     fill_mode="constant")
-        # print("Fitting generator")
-        # datagen.fit(X_train)
-
         for _ in range(10):
             history = model.fit_generator(
-                generate_samples(df_train, DATA_PATH),
-                samples_per_epoch=df_train.shape[0],
-                nb_epoch=1,
-                validation_data=generate_samples(df_valid, DATA_PATH, augment=False),
-                nb_val_samples=df_valid.shape[0],
+                generate_samples(df_train, DATA_PATH, batch_size=BATCH_SIZE),
+                # samples_per_epoch=df_train.shape[0],
+                steps_per_epoch=df_train.shape[0] // BATCH_SIZE,  # Keras 2
+                # nb_epoch=1,
+                epochs=1,  # Keras 2
+                validation_data=generate_samples(df_valid, DATA_PATH, batch_size=BATCH_SIZE, augment=False),
+                # nb_val_samples=df_valid.shape[0],
+                validation_steps=df_valid.shape[0] // BATCH_SIZE, # Keras 2
             )
-
+            print("Epoch complete")
             model.save('model.h5')
 
 
-    with open(os.path.join(local_project_path, 'model.json'), 'w') as file:
+    with open(os.path.join(PROJECT_PATH, 'model.json'), 'w') as file:
         file.write(model.to_json())
 
     backend.clear_session()
