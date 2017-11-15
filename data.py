@@ -1,9 +1,11 @@
+import argparse
 import numpy as np
 import skimage.transform as sktransform
 import random
 import matplotlib.image as mpimg
 import os
 
+# Project globals
 DATA_DIR = "/flush1/wat421/Behavioral_Cloning/data"
 CSV_PATH = "/flush1/wat421/Behavioral_Cloning/data/driving_log.csv"
 
@@ -81,3 +83,19 @@ def generate_samples(data, root_path, batch_size=128, augment=True):
             x[flip_indices] = x[flip_indices, :, ::-1, :]
             y[flip_indices] = -y[flip_indices]
             yield (x, y)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Augment input data.')
+    parser.add_argument('--data',
+                        type=str,
+                        default=DATA_DIR,
+                        help='path to your training data')
+    parser.add_argument('--csv',
+                        type=str,
+                        default=CSV_PATH,
+                        help='path to your csv file')
+
+    args = parser.parse_args()
+
+    preprocess(csv_path=args.csv,
+               data_dir=args.data)

@@ -9,6 +9,7 @@ from keras.models import load_model
 from sklearn import model_selection
 from data import generate_samples
 
+# Set some project golbals
 PROJECT_PATH = './'
 DATA_PATH = os.path.join(PROJECT_PATH,
                          'data')
@@ -16,6 +17,7 @@ DATA_PATH = os.path.join(PROJECT_PATH,
 DEAFULT_MODEL = "model.h5"
 
 BATCH_SIZE = 1024
+TEST_SIZE = 0.2
 
 
 def main():
@@ -29,7 +31,7 @@ def main():
         # Split data into training and validation sets
         X_train, X_test, y_train, y_test = model_selection.train_test_split(car_images,
                                                                             steering_angles,
-                                                                            test_size=.2)
+                                                                            test_size=TEST_SIZE)
         print("There are {} total samples".format(len(car_images)))
 
         print("Training")
@@ -49,8 +51,9 @@ def main():
                                         "driving_log.csv")
         df = pd.io.parsers.read_csv(driving_log_path)
         # Split data into training and validation sets
-        df_train, df_valid = model_selection.train_test_split(df, test_size=.2)
+        df_train, df_valid = model_selection.train_test_split(df, test_size=TEST_SIZE)
 
+        print("Training")
         for _ in range(10):
             history = model.fit_generator(
                 generate_samples(df_train, DATA_PATH, batch_size=BATCH_SIZE),
